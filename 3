@@ -1,0 +1,17 @@
+
+pip install pyspark
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("FlightAnalysis").getOrCreate()
+
+file_path = "/content/Airlines.csv"  
+df = spark.read.option("header", "true").csv(file_path, inferSchema=True)
+
+df.show(5)
+delayed_flights = df.filter(df['Delay']*60 > 15)
+
+delayed_flights.show(5)
+df.printSchema()
+correlation = df.stat.corr('Length', 'Delay')
+
+print(f"Correlation between flight length and arrival delay: {correlation}")
