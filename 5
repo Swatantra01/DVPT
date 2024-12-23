@@ -1,0 +1,29 @@
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("MovieRatingsAnalysis").getOrCreate()
+
+movies_file_path = "/content/movies.csv" 
+movies_df = spark.read.option("header", "true").csv(movies_file_path, inferSchema=True)
+
+ratings_file_path = "/content/ratings.csv" 
+ratings_df = spark.read.option("header", "true").csv(ratings_file_path, inferSchema=True)
+
+movies_df.printSchema()
+ratings_df.printSchema()
+
+movies_df.createOrReplaceTempView("movies")
+ratings_df.createOrReplaceTempView("ratings")
+
+query = """
+    SELECT m.movieId, m.title, AVG(r.rating) AS avg_rating, COUNT(r.rating) AS rating_count
+    FROM movies m
+    JOIN ratings r ON m.movieId = r.movieId
+    GROUP BY m.movieId, m.title
+    HAVING COUNT(r.rating) >= 10
+    ORDER BY avg_rating DESC
+    LIMIT 10
+"""
+
+top_10_movies = spark.sql(query)
+
+top_10_movies.show()
