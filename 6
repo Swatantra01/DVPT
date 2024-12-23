@@ -1,0 +1,52 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, count, avg, split, explode
+
+spark = SparkSession.builder.appName("MovieRatingsAnalysis").getOrCreate()
+
+movies_file_path = "/content/movies.csv"  # Update with the correct path
+movies_df = spark.read.option("header", "true").csv(movies_file_path, inferSchema=True)
+
+ratings_file_path = "/content/ratings.csv"  # Update with the correct path
+ratings_df = spark.read.option("header", "true").csv(ratings_file_path, inferSchema=True)
+
+movies_df.printSchema()
+ratings_df.printSchema()
+
+movies_df.createOrReplaceTempView("movies")
+ratings_df.createOrReplaceTempView("ratings")
+
+query_active_users = """
+    SELECT userId, COUNT(rating) AS num_ratings
+    FROM ratings
+    GROUP BY userId
+    ORDER BY num_ratings DESC
+    LIMIT 10
+"""
+
+most_active_users = spark.sql(query_active_users)
+most_active_users.show()
+
+query_sorted_movies = """
+    SELECT movieId, title
+    FROM movies
+    ORDER BY title ASC
+"""
+
+sorted_movies = spark.sql(query_sorted_movies)
+sorted_movies.show()
+
+movies_genres_df = movies_df.withColumn("genre", explode(split(col("genres"), "\|")))
+
+genre_ratings_df = movies_genres_df.join(ratings_df, "movieId")
+
+genre_ratings_df.createOrReplaceTempView("genre_ratings")
+
+query_avg_rating_per_genre = """
+    SELECT genre, AVG(rating) AS avg_rating
+    FROM genre_ratings
+    GROUP BY genre
+    ORDER BY avg_rating DESC
+"""
+
+avg_rating_per_genre = spark.sql(query_avg_rating_per_genre)
+avg_rating_per_genre.show()
