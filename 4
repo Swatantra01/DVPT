@@ -1,0 +1,28 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col,avg
+     
+
+spark = SparkSession.builder.appName("FlightAnalysis").getOrCreate()
+     
+
+file_path = "/content/Airlines.csv"  
+df = spark.read.option("header", "true").csv(file_path, inferSchema=True)
+     
+
+
+df.show(5)
+carrier_avg_delay = df.groupBy('Airline').agg(
+    avg('Delay').alias('AvgDelay')
+)
+     
+
+carrier_avg_delay.show()
+route_avg_delay = df.groupBy('AirportFrom', 'AirportTo').agg(
+    avg('Delay').alias('AvgDelay') 
+)
+     
+
+
+top_5_routes = route_avg_delay.orderBy(col('AvgDelay').desc()).limit(5)
+
+top_5_routes.show()
