@@ -1,0 +1,45 @@
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import VectorAssembler, StandardScaler, StringIndexer
+from pyspark.ml.regression import LinearRegression
+from pyspark.ml import Pipeline
+from pyspark.ml.evaluation import RegressionEvaluator
+
+spark = SparkSession.builder.appName("House Price Prediction").getOrCreate()
+
+data_path = "/content/HousePriceIndia.csv"  # Replace with the actual path to your dataset
+data = spark.read.csv(data_path, header=True, inferSchema=True)
+
+data = data.withColumnRenamed("id", "HouseID") \
+           .withColumnRenamed("Postal Code", "Location") \
+           .withColumnRenamed("living area", "Size") \
+           .withColumnRenamed("number of bedrooms", "Bedrooms") \
+           .withColumnRenamed("number of bathrooms", "Bathrooms") \
+           .withColumnRenamed("Price", "Price")
+
+data = data.dropna()
+
+indexer = StringIndexer(inputCol="Location", outputCol="LocationIndex")
+
+feature_cols = ["Size", "Bedrooms", "Bathrooms", "LocationIndex"]
+assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
+
+scaler = StandardScaler(inputCol="features", outputCol="scaledFeatures")
+
+lr = LinearRegression(featuresCol="scaledFeatures", labelCol="Price")
+
+pipeline = Pipeline(stages=[indexer, assembler, scaler, lr])
+
+train_data, test_data = data.randomSplit([0.8, 0.2], seed=42)
+
+model = pipeline.fit(train_data)
+
+predictions = model.transform(test_data)
+
+evaluator = RegressionEvaluator(labelCol="Price", predictionCol="prediction", metricName="rmse")
+rmse = evaluator.evaluate(predictions)
+print(f"Root Mean Squared Error (RMSE): {rmse}")
+
+lr_model = model.stages[-1]
+print("Feature Importances:", lr_model.coefficients)
+
+predictions.select("HouseID", "Price", "prediction").show()
