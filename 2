@@ -1,0 +1,50 @@
+import findspark
+findspark.init()
+     
+from pyspark.sql import SparkSession
+     
+spark = SparkSession.builder.appName("DataFrameOperations").getOrCreate()
+     
+data = [("Alice", 25, "New York", "Female"),
+        ("Bob", 35, "Los Angeles", "Male"),
+        ("Charlie", 28, "Chicago", "Male"),
+        ("David", 42, "Houston", "Male"),
+        ("Emily", 30, "Miami", "Female"),
+        ("Frank", 22, "Dallas", "Male"),
+        ("Grace", 38, "Philadelphia", "Female"),
+        ("Henry", 29, "San Antonio", "Male"),
+        ("Isabella", 33, "San Diego", "Female"),
+        ("Jack", 45, "San Jose", "Male")]
+     
+
+df = spark.createDataFrame(data, ["name", "age", "city", "gender"])
+     
+filtered_df = df.filter(df["age"] > 30)
+     
+filtered_df = filtered_df.withColumn("tax", filtered_df["age"] * 0.1)
+
+renamed_df = filtered_df.withColumnRenamed("age", "years")
+     
+final_df = renamed_df.drop("city", "gender")
+     
+final_df.show()
+
+sales_by_category = df.withColumn("TotalSales", col("Price") * col("StockQuantity")) \
+    .groupBy("Category") \
+    .agg(sum("TotalSales").alias("TotalSalesAmount"))
+
+print("\nTotal Sales Amount by Category:")
+sales_by_category.show()
+
+sales_by_product = df.withColumn("TotalSales", col("Price") * col("StockQuantity")) \
+    .groupBy("ProductName") \
+    .agg(
+        sum("TotalSales").alias("TotalSalesAmount"),
+        sum("StockQuantity").alias("TotalQuantitySold")
+    )
+
+print("\nTotal Sales Amount and Total Quantity Sold for Each Product:")
+sales_by_product.show()
+
+# Stop Spark Session
+spark.stop()
