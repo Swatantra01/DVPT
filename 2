@@ -1,33 +1,40 @@
-import findspark
-findspark.init()
-     
 from pyspark.sql import SparkSession
-     
-spark = SparkSession.builder.appName("DataFrameOperations").getOrCreate()
-     
-data = [("Alice", 25, "New York", "Female"),
-        ("Bob", 35, "Los Angeles", "Male"),
-        ("Charlie", 28, "Chicago", "Male"),
-        ("David", 42, "Houston", "Male"),
-        ("Emily", 30, "Miami", "Female"),
-        ("Frank", 22, "Dallas", "Male"),
-        ("Grace", 38, "Philadelphia", "Female"),
-        ("Henry", 29, "San Antonio", "Male"),
-        ("Isabella", 33, "San Diego", "Female"),
-        ("Jack", 45, "San Jose", "Male")]
+from pyspark.sql.functions import col, sum
      
 
-df = spark.createDataFrame(data, ["name", "age", "city", "gender"])
-     
-filtered_df = df.filter(df["age"] > 30)
-     
-filtered_df = filtered_df.withColumn("tax", filtered_df["age"] * 0.1)
+# Step 1: Initialize Spark Session
+spark = SparkSession.builder \
+    .appName("Product Data Analysis") \
+    .getOrCreate()
 
-renamed_df = filtered_df.withColumnRenamed("age", "years")
-     
-final_df = renamed_df.drop("city", "gender")
-     
-final_df.show()
+# Step 2: Create DataFrame with product data
+data = [
+    (1, "Laptop", "Electronics", 800, 10, 4.5),
+    (2, "Smartphone", "Electronics", 500, 20, 4.3),
+    (3, "Desk Chair", "Furniture", 150, 15, 4.2),
+    (4, "Monitor", "Electronics", 200, 12, 4.1),
+    (5, "Table", "Furniture", 300, 8, 4.0),
+    (6, "Washing Machine", "Appliances", 700, 5, 4.6),
+    (7, "Refrigerator", "Appliances", 1200, 3, 4.8),
+    (8, "Headphones", "Electronics", 100, 25, 4.4),
+    (9, "Microwave", "Appliances", 150, 7, 4.3),
+    (10, "Sofa", "Furniture", 600, 4, 4.7)
+]
+
+# Define column names
+columns = ["ProductID", "ProductName", "Category", "Price", "StockQuantity", "Rating"]
+
+# Create DataFrame
+df = spark.createDataFrame(data, columns)
+
+# Show the initial DataFrame
+print("Original DataFrame:")
+df.show()
+
+# Step 3: Sort by Price in descending order and then by Category in ascending order
+sorted_df = df.orderBy(col("Price").desc(), col("Category").asc())
+print("\nSorted DataFrame (by Price desc, Category asc):")
+sorted_df.show()
 
 sales_by_category = df.withColumn("TotalSales", col("Price") * col("StockQuantity")) \
     .groupBy("Category") \
